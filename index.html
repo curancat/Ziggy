@@ -27,27 +27,32 @@
       <button onclick="enviarMensagem()">💬 Enviar mensagem</button>
       <button onclick="lerConversa()">📖 Ler conversa</button>
       <button onclick="concederProtecao()">🛡️ Gênesis</button>
-      <button onclick="verItens()">🎒 Inventario</button>
+      <button onclick="verItens()">🎒 Inventário</button>
       <button onclick="usarItem()">✨ Usar item</button>
+      <button onclick="usarPoder()">⚡ Usar poder</button>
     </div>
   </div>
 
   <script>
-    alert('ZIGGY RECRIAÇÃO');
-    const PARTICIPANTES = ['Psique','Abrax','Hell Cat','Beast','Yellowfer','Lindemberg'];
     const ME = 'Litlegot';
-    const channel = new BroadcastChannel('global_channel');
-    const _load = k => JSON.parse(localStorage.getItem(k)||'[]');
-    const _save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+    const PARTICIPANTES = ['Psique','Abrax','Hell Cat','Beast','Yellowfer','Lindemberg'];
+
+    const channel = new BroadcastChannel('canal_global');
+
+    const _load = k => JSON.parse(localStorage.getItem(ME + '_' + k) || '[]');
+    const _save = (k, v) => localStorage.setItem(ME + '_' + k, JSON.stringify(v));
 
     channel.onmessage = ev => {
-      const {type,data} = ev.data;
-      if(type==='msg'&&data.to===ME) alert(`📨 De ${data.from}: ${data.text}`);
-      if(type==='usePower'&&data.to===ME){
-        // checa proteção
+      const { type, data } = ev.data;
+
+      if (type === 'msg' && data.to === ME) {
+        alert(`📨 De ${data.from}: ${data.text}`);
+      }
+
+      if (type === 'usePower' && data.to === ME) {
         const itens = _load('items');
-        const prot = itens.find(i=>i.target===ME);
-        if(prot){
+        const prot = itens.find(i => i.target === ME);
+        if (prot) {
           alert(`🛡️ Seu item "${prot.item}" te protegeu de ${data.power}!`);
         } else {
           alert(`💔 Você foi atingido por "${data.power}" de ${data.from}.`);
@@ -55,46 +60,56 @@
       }
     };
 
-    function enviarMensagem(){
-      let dest=prompt(`Enviar para?\n${PARTICIPANTES.join(', ')}`);
-      if(!PARTICIPANTES.includes(dest)) return alert('Inválido.');
-      let txt=prompt(`Mensagem de ${ME} p/ ${dest}:`);
-      if(!txt) return;
-      channel.postMessage({type:'msg',data:{from:ME,to:dest,text:txt.trim()}});
+    function enviarMensagem() {
+      let dest = prompt(`Enviar para?\n${PARTICIPANTES.join(', ')}`);
+      if (!PARTICIPANTES.includes(dest)) return alert('Inválido.');
+      let txt = prompt(`Mensagem de ${ME} para ${dest}:`);
+      if (!txt) return;
+      channel.postMessage({ type: 'msg', data: { from: ME, to: dest, text: txt.trim() } });
       alert('Enviado!');
     }
-    function lerConversa(){
-      alert('Use o chat do destinatário.');
+
+    function lerConversa() {
+      alert('Use o app do destinatário para ver mensagens.');
     }
 
-    function concederProtecao(){
-      let dest=prompt(`Dar item de proteção a?\n${PARTICIPANTES.join(', ')}`);
-      if(!PARTICIPANTES.includes(dest)) return alert('Inválido.');
-      let item=prompt('Qual item?');
-      if(!item) return;
-      const itens=_load('items');
-      itens.push({from:ME,target:dest,item:item.trim()});
-      _save('items',itens);
+    function concederProtecao() {
+      let dest = prompt(`Dar item de proteção a?\n${PARTICIPANTES.join(', ')}`);
+      if (!PARTICIPANTES.includes(dest)) return alert('Inválido.');
+      let item = prompt('Qual item?');
+      if (!item) return;
+      const itens = _load('items');
+      itens.push({ from: ME, target: dest, item: item.trim() });
+      _save('items', itens);
       alert(`🛡️ Item "${item.trim()}" concedido a ${dest}`);
     }
 
-    function verItens(){
-      const itens=_load('items').filter(i=>i.target===ME);
-      if(!itens.length) return alert('Sem itens.');
-      alert(itens.map((i,n)=>`${n+1}. ${i.item} (de ${i.from})`).join('\n'));
+    function verItens() {
+      const itens = _load('items').filter(i => i.target === ME);
+      if (!itens.length) return alert('Sem itens.');
+      alert(itens.map((i, n) => `${n + 1}. ${i.item} (de ${i.from})`).join('\n'));
     }
 
-    function usarItem(){
-      const itens=_load('items').filter(i=>i.target===ME);
-      if(!itens.length) return alert('Sem itens.');
-      let idx=+prompt(itens.map((i,n)=>`${n+1}. ${i.item}`).join('\n')+'\nEscolha nº:')-1;
-      const sel=itens[idx];
-      if(!sel) return alert('Inválido.');
+    function usarItem() {
+      const itens = _load('items').filter(i => i.target === ME);
+      if (!itens.length) return alert('Sem itens.');
+      let idx = +prompt(itens.map((i, n) => `${n + 1}. ${i.item}`).join('\n') + '\nEscolha nº:') - 1;
+      const sel = itens[idx];
+      if (!sel) return alert('Inválido.');
       alert(`✨ Você usou "${sel.item}"!`);
-      // consome item
-      const all=_load('items');
-      all.splice( all.findIndex(x=>x===sel),1 );
-      _save('items',all);
+      const all = _load('items');
+      const i = all.findIndex(x => x.from === sel.from && x.item === sel.item && x.target === sel.target);
+      if (i !== -1) all.splice(i, 1);
+      _save('items', all);
+    }
+
+    function usarPoder() {
+      let dest = prompt(`Usar poder em quem?\n${PARTICIPANTES.join(', ')}`);
+      if (!PARTICIPANTES.includes(dest)) return alert('Inválido.');
+      let poder = prompt('Nome do poder?');
+      if (!poder) return;
+      channel.postMessage({ type: 'usePower', data: { from: ME, to: dest, power: poder.trim() } });
+      alert(`⚡ Poder "${poder}" lançado sobre ${dest}`);
     }
   </script>
 </body>
